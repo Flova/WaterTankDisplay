@@ -1,5 +1,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_TFTLCD.h>
+#include <EEPROM.h>
 #include <TouchScreen.h>
 
 // ---- Config ----
@@ -85,8 +86,13 @@ const int page_count = 4;
 // Current page
 enum Pages current_page = BIG_NUM_LITER;
 
+#define LAST_PAGE_EEPROM_ADDR 0
+
 // Initialization
 void setup() {
+  // Check if the last page was saved in the EEPROM
+  int eeprom_page = EEPROM.read(LAST_PAGE_EEPROM_ADDR);
+  current_page = (enum Pages)constrain(eeprom_page, 0, page_count - 1);
 
   // Setup TFT display
   tft.begin(tft.readID());
@@ -156,6 +162,9 @@ void goToNextPage(bool reverse) {
 
   // Update page pointer
   current_page = (current_page + page_count + step) % page_count;
+
+  // Store the current page in the EEPROM
+  EEPROM.write(LAST_PAGE_EEPROM_ADDR, current_page);
 
   // Update dots
   drawDot(true, false, pageIdxToPointX(current_page), control_bar_dot_y);
@@ -305,7 +314,7 @@ void loop() {
       tft.setTextSize(2);
       tft.setTextColor(WHITE);
       tft.setCursor(10, 10);
-      tft.println("Settings");
+      tft.println("Settings!");
       break;
   }
 }
