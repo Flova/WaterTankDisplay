@@ -283,23 +283,29 @@ void loop() {
     goToNextPage(false);
 
   // Draw pages
-  if (current_page == BIG_NUM_LITER) {
+  switch (current_page)
+  {
     // Draw page that displays the liters as big numbers
-    drawBigNumber(liter, 'L');
-  } else if (current_page == BIG_NUM_PERCENT) {
+    case BIG_NUM_LITER:
+      drawBigNumber(liter, 'L');
+      break;
     // Draw page that displays the level in percent as big numbers
-    drawBigNumber(percent, '%');
-  } else if (current_page == TANK_VIEW) {
+    case BIG_NUM_PERCENT:
+      drawBigNumber(percent, '%');
+      break;
     // Draw combined view of tank illustration, percent and liter
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.setCursor(10, 10);
-    tft.println("Tank View");
-  } else if (current_page == SETTINGS) {
+    case TANK_VIEW:
+      tft.setTextSize(2);
+      tft.setTextColor(WHITE);
+      tft.setCursor(10, 10);
+      tft.println("Tank View");
+      break;
     // Draw settings page
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.setCursor(10, 10);
-    tft.println("Settings");
+    case SETTINGS:
+      tft.setTextSize(2);
+      tft.setTextColor(WHITE);
+      tft.setCursor(10, 10);
+      tft.println("Settings");
+      break;
   }
 }
