@@ -71,15 +71,18 @@ const int control_bar_btn_width = 40;
 const int control_bar_btn_height = 40;
 int control_bar_btn_y = 0, control_bar_divider_y = 0, control_bar_dot_y = 0;
 
-// States
-// Pages
+// All available pages
 enum Pages {
   BIG_NUM_LITER,
   BIG_NUM_PERCENT,
   TANK_VIEW,
   //SETTINGS,
 };
+// Number of pages in the enum above
 const int page_count = 3;
+
+// ---- States ----
+// Current page
 enum Pages current_page = BIG_NUM_LITER;
 
 // Initialization
