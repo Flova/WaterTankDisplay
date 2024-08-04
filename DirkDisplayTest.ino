@@ -76,10 +76,10 @@ enum Pages {
   BIG_NUM_LITER,
   BIG_NUM_PERCENT,
   TANK_VIEW,
-  //SETTINGS,
+  SETTINGS
 };
 // Number of pages in the enum above
-const int page_count = 3;
+const int page_count = 4;
 
 // ---- States ----
 // Current page
@@ -89,8 +89,6 @@ enum Pages current_page = BIG_NUM_LITER;
 void setup() {
 
   // Setup TFT display
-  // Reset display (is this nessesary? TODO)
-  tft.reset();
   tft.begin(tft.readID());
   tft.setRotation(1);
   // Draw black background
@@ -162,6 +160,9 @@ void goToNextPage(bool reverse) {
   // Update dots
   drawDot(true, false, pageIdxToPointX(current_page), control_bar_dot_y);
   drawDot(false, true, pageIdxToPointX(old_page), control_bar_dot_y);
+
+  // Clear page
+  tft.fillRect(0, 0, tft.width(), control_bar_divider_y - 1, BLACK);
 }
 
 // Get the x position of a point that represents a given page in the control bar
@@ -290,6 +291,15 @@ void loop() {
     drawBigNumber(percent, '%');
   } else if (current_page == TANK_VIEW) {
     // Draw combined view of tank illustration, percent and liter
-    tft.fillRect(0, 0, tft.width(), control_bar_divider_y - 1, BLACK);
+    tft.setTextSize(2);
+    tft.setTextColor(WHITE);
+    tft.setCursor(10, 10);
+    tft.println("Tank View");
+  } else if (current_page == SETTINGS) {
+    // Draw settings page
+    tft.setTextSize(2);
+    tft.setTextColor(WHITE);
+    tft.setCursor(10, 10);
+    tft.println("Settings");
   }
 }
