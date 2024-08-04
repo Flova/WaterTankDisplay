@@ -1,0 +1,5 @@
+{
+    "sketch": "DirkDisplayTest.ino",
+    "output": "build",
+    "board": "arduino:avr:uno"
+}
