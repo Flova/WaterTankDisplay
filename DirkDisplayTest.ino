@@ -93,11 +93,11 @@ void setup() {
   // Draw black background
   tft.fillScreen(BLACK);
 
-  // Calculate "constants" that depend on runtime data 
+  // Calculate "constants" that depend on runtime data
   control_bar_btn_y = tft.height() - control_bar_btn_height - control_bar_btn_margin;
   control_bar_divider_y = control_bar_btn_y - control_bar_btn_margin;
   control_bar_dot_y = control_bar_btn_y + control_bar_btn_height / 2;
-  
+
   // Draw the control bar at the bottom of the screen
   drawControlBar();
 
@@ -106,7 +106,7 @@ void setup() {
   pinMode(SONAR_ECHO_PIN, INPUT);
 }
 
-// Returns if the sreen was touched and where it was touched
+// Returns if the screen was touched and where it was touched
 TouchResult TouchGetXY(void) {
   // Get the pressed point from the driver
   TSPoint p = ts.getPoint();
@@ -115,12 +115,12 @@ TouchResult TouchGetXY(void) {
   pinMode(XM, OUTPUT);  // Recause TFT control pins
   // Create result object
   TouchResult result;
-  // Treshold the preassure to determine a clear pressed or not pressed
+  // Threshold the pressure to determine a clear pressed or not pressed
   result.pressed = (p.z > MINPRESSURE && p.z < MAXPRESSURE);
   if (result.pressed) {
-    // If we pressed we map the touch screen space to the screen dimensions 
-    // This inclues some additional logic to handle the screen rotation
-    result.x = tft.width() - map(p.y, TS_LEFT, TS_RT, 0, tft.width()); 
+    // If we pressed we map the touch screen space to the screen dimensions
+    // This includes some additional logic to handle the screen rotation
+    result.x = tft.width() - map(p.y, TS_LEFT, TS_RT, 0, tft.width());
     result.y = map(p.x, TS_TOP, TS_BOT, 0, tft.height());
   }
   return result;
@@ -164,9 +164,9 @@ void goToNextPage(bool reverse) {
 // Get the x position of a point that represents a given page in the control bar
 // The y position is equal for all of them, so no function is needed
 int pageIdxToPointX(enum Pages page) {
-  // Horrizontal space that is not available for the dots, because a button is there (including its margin)
+  // Horizontal space that is not available for the dots, because a button is there (including its margin)
   const int space_occupied_by_btn = 2 * control_bar_btn_margin + control_bar_btn_width;
-  // Horrizontal space that is available between the buttons in the control bar
+  // Horizontal space that is available between the buttons in the control bar
   const int space_between_buttons = tft.width() - 2 * space_occupied_by_btn;
   // How much vertical space needs to be between the dots for an even spacing
   const int distance_between_points = space_between_buttons / (page_count + 1);
@@ -222,7 +222,7 @@ void drawBigNumber(float value, char unit) {
 }
 
 // Draws the full control bar (only partial updates are performed later on)
-// Should look like this:  < * O * * >  
+// Should look like this:  < * O * * >
 void drawControlBar()
 {
   // Create / Draw page buttons
@@ -242,7 +242,7 @@ void drawControlBar()
 }
 
 // Checks if a button was pressed, by comparing it to a touch event
-// If so the visuals are changed until it is released (if this function is called regulary)
+// If so the visuals are changed until it is released (if this function is called regularly)
 // The function returns true if the button has just been pressed
 bool processBtn(Adafruit_GFX_Button *btn, TouchResult *touch_state)
 {
@@ -286,7 +286,7 @@ void loop() {
     // Draw page that displays the level in percent as big numbers
     drawBigNumber(percent, '%');
   } else if (current_page == TANK_VIEW) {
-    // Draw combined view of tank illustration, percent and liter 
+    // Draw combined view of tank illustration, percent and liter
     tft.fillRect(0, 0, tft.width(), control_bar_divider_y - 1, BLACK);
   }
 }
