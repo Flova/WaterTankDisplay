@@ -1,5 +1,5 @@
 {
-    "sketch": "DirkDisplayTest.ino",
+    "sketch": "WaterTankDisplay.ino",
     "output": "build",
     "board": "arduino:avr:uno"
 }
