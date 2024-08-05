@@ -70,14 +70,14 @@ Adafruit_GFX_Button left_btn, right_btn;
 const int control_bar_btn_margin = 5;
 const int control_bar_btn_width = 40;
 const int control_bar_btn_height = 40;
-int control_bar_btn_y = 0, control_bar_divider_y = 0, control_bar_dot_y = 0;
+int control_bar_btn_y = 0, control_bar_divider_y = 0, control_bar_dot_y = 0;  // Will be init later on
 
 // All available pages
 enum Pages {
-  BIG_NUM_LITER,
-  BIG_NUM_PERCENT,
-  TANK_VIEW,
-  SETTINGS
+  BIG_NUM_LITER = 0,
+  BIG_NUM_PERCENT = 1,
+  TANK_VIEW = 2,
+  SETTINGS = 3,
 };
 // Number of pages in the enum above
 const int page_count = 4;
@@ -273,6 +273,28 @@ bool processBtn(Adafruit_GFX_Button *btn, TouchResult *touch_state)
   return false;
 }
 
+// Draws the tank illustration on the screen
+void drawTank(int positon_x, int position_y, int percent)
+{
+  // Define dimensions of the tank
+  const int width = 100;
+  const int height = 20;
+  const int offset_x = 0;
+  const int offset_y = 40;
+  // Use timestamp for animation of the wave
+  float step = millis() * 0.002;
+  // Draw two vertical lines for each pixel collumn of the wave
+  for (int x = 0; x < width; x++) {
+    // Determine the y point where the black line turns into a white line
+    int y = height / 2 + 5 * sin(step + 2 * PI * x / width);
+    // Draw the lines above and below the waterline at that x position (y)
+    tft.drawLine(x + offset_x, height + offset_y, x + offset_x, y + offset_y, WHITE);
+    tft.drawLine(x + offset_x, offset_y, x + offset_x, y - 1 + offset_y, BLACK);
+  }
+  // Fill the rest of the tank
+  tft.fillRect(offset_x, offset_y + height, width, 100, WHITE);
+}
+
 // Main loop
 void loop() {
   // First get the distance to the water from the sensor
@@ -308,13 +330,14 @@ void loop() {
       tft.setTextColor(WHITE);
       tft.setCursor(10, 10);
       tft.println("Tank View");
+      drawTank(0,0,100);
       break;
     // Draw settings page
     case SETTINGS:
       tft.setTextSize(2);
       tft.setTextColor(WHITE);
       tft.setCursor(10, 10);
-      tft.println("Settings!");
+      tft.println("Settings");
       break;
   }
 }
