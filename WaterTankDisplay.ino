@@ -279,7 +279,7 @@ void loop() {
   float distance = measureDistance();
 
   // Convert distance to liter and percent based on provided tank dimensions
-  float liter = map(distance, TANK_FULL_DEPTH, TANK_EMPTY_DEPTH, TANK_VOLUME, 0);
+  float liter = map(distance * 10, TANK_FULL_DEPTH * 10, TANK_EMPTY_DEPTH *  10, TANK_VOLUME, 0); // Scale by 10 here, because we cast to an int and the liters have more prescision than the cm (as an int)
   float percent = map(distance, TANK_FULL_DEPTH, TANK_EMPTY_DEPTH, 100, 0);
 
   // Query the touch screen and process the control bar buttons
