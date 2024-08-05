@@ -7,8 +7,10 @@
 // ---- Config ----
 // Domain specific config
 #define TANK_VOLUME 400      // Liters
-#define TANK_EMPTY_DEPTH 88  // cm
-#define TANK_FULL_DEPTH 8    // cm
+#define TANK_EMPTY_DEPTH 84  // cm
+#define TANK_FULL_DEPTH 4    // cm
+
+#define ANIMATION_SPEED 0.002
 
 // Touch screen config
 #define MINPRESSURE 100
@@ -63,11 +65,14 @@ struct TouchResult {
 #define OLIVE 0x7BE0
 #define LIGHTGREY 0xC618
 #define DARKGREY 0x7BEF
+#define VERYDARKGREY 0x39E7
 
 // UI elements
 Adafruit_GFX_Button left_btn, right_btn;
 
 // Constants
+const int big_letters_left_margin = 35;
+const int big_letters_y = 60;
 const int control_bar_btn_margin = 5;
 const int control_bar_btn_width = 40;
 const int control_bar_btn_height = 40;
@@ -78,10 +83,11 @@ enum Pages {
   BIG_NUM_LITER = 0,
   BIG_NUM_PERCENT = 1,
   TANK_VIEW = 2,
-  SETTINGS = 3,
+  HISTORY = 3,
+  SETTINGS = 4,
 };
 // Number of pages in the enum above
-const int page_count = 4;
+const int page_count = 5;
 
 // ---- States ----
 // Current page
@@ -90,20 +96,24 @@ enum Pages current_page = BIG_NUM_LITER;
 #define LAST_PAGE_EEPROM_ADDR 0
 
 // History
-#define LONG_HISTORY_SIZE 24 // 24 hours
-#define SHORT_HISTORY_SIZE 64 // samples
-#define HISTORY_PLOT_WIDTH 128 // pixels
+#define LONG_HISTORY_SIZE 1      // hours
+#define SHORT_HISTORY_SIZE 64    // samples
+#define HISTORY_PLOT_WIDTH 256   // pixels
+#define HISTORY_PLOT_HEIGHT 128  // pixels
 
 // Rolling buffer of uint16_t values
 CircularBuffer<float, HISTORY_PLOT_WIDTH> long_history;
 unsigned long last_long_history_update = 0;
-#define LONG_HISTORY_UPDATE_INTERVAL LONG_HISTORY_SIZE * 60 * 60 * 1000 / HISTORY_PLOT_WIDTH // ms
+const unsigned long LONG_HISTORY_UPDATE_INTERVAL = ((unsigned long)LONG_HISTORY_SIZE * 60 * 60 * 1000) / HISTORY_PLOT_WIDTH;  // ms
 
 // Rolling buffer of uint16_t values
 CircularBuffer<float, SHORT_HISTORY_SIZE> short_history;
 
 // Initialization
 void setup() {
+
+  Serial.begin(9600);
+
   // Check if the last page was saved in the EEPROM
   int eeprom_page = EEPROM.read(LAST_PAGE_EEPROM_ADDR);
   current_page = (enum Pages)constrain(eeprom_page, 0, page_count - 1);
@@ -219,20 +229,17 @@ void drawDot(bool active_page, bool erase, int x, int y) {
   }
 }
 
-// Draw a big 3 digit number plus its unit, filling the whole page
-void drawBigNumber(float value, char unit) {
-  // Some parameters to draw the numbers at the correct position
-  const int big_letters_left_margin = 35;
-  const int big_letters_y = 60;
+// Draw a big 3 digit number plus its unit
+void drawBigNumber(int position_x, int position_y, float value, char unit, int size = 10) {
   // This mainly determines where the unit symbol is drawn and how much distance it has to the number
-  const int three_letter_width = 200;
+  const int three_letter_width = 20 * size;
 
   // Set text formatting
   tft.setTextColor(WHITE, BLACK);
-  tft.setTextSize(10);
+  tft.setTextSize(size);
 
   // Set position
-  tft.setCursor(big_letters_left_margin, big_letters_y);
+  tft.setCursor(position_x, position_y);
 
   // Buffer to hold the formatted string
   char buffer[4];
@@ -244,14 +251,13 @@ void drawBigNumber(float value, char unit) {
   tft.println(buffer);
 
   // Draw unit symbol
-  tft.setCursor(big_letters_left_margin + three_letter_width, big_letters_y);
+  tft.setCursor(position_x + three_letter_width, position_y);
   tft.println(unit);
 }
 
 // Draws the full control bar (only partial updates are performed later on)
 // Should look like this:  < * O * * >
-void drawControlBar()
-{
+void drawControlBar() {
   // Create / Draw page buttons
   left_btn.initButtonUL(&tft, control_bar_btn_margin, control_bar_btn_y, control_bar_btn_width, control_bar_btn_height, BLACK, WHITE, BLACK, "<", 2);
   right_btn.initButtonUL(&tft, tft.width() - control_bar_btn_margin - control_bar_btn_width, control_bar_btn_y, control_bar_btn_width, control_bar_btn_height, BLACK, WHITE, BLACK, ">", 2);
@@ -271,8 +277,7 @@ void drawControlBar()
 // Checks if a button was pressed, by comparing it to a touch event
 // If so the visuals are changed until it is released (if this function is called regularly)
 // The function returns true if the button has just been pressed
-bool processBtn(Adafruit_GFX_Button *btn, TouchResult *touch_state)
-{
+bool processBtn(Adafruit_GFX_Button *btn, TouchResult *touch_state) {
   // "Press" button UI element of the screen was pressed and the touch event in proximity of the button
   btn->press(touch_state->pressed && btn->contains(touch_state->x, touch_state->y));
   // Redraw the button uppon release (undo the inverted colors)
@@ -288,25 +293,51 @@ bool processBtn(Adafruit_GFX_Button *btn, TouchResult *touch_state)
 }
 
 // Draws the tank illustration on the screen
-void drawTank(int positon_x, int position_y, int percent)
-{
-  // Define dimensions of the tank
-  const int width = 100;
-  const int height = 20;
-  const int offset_x = 0;
-  const int offset_y = 40;
+void drawTank(int position_x, int position_y, int width, int height, int wave_height, float percent, uint16_t fg_color, uint16_t bg_color) {
+  // Calculate the amount of pixels that represent the range from min -> max value
+  const int movable_height = height - wave_height;
+  // Calculate where the waterline will be
+  const int water_y = position_y + wave_height + movable_height * (100 - percent) / 100;
   // Use timestamp for animation of the wave
-  float step = millis() * 0.002;
+  float step = millis() * ANIMATION_SPEED;
   // Draw two vertical lines for each pixel collumn of the wave
   for (int x = 0; x < width; x++) {
     // Determine the y point where the black line turns into a white line
-    int y = height / 2 + 5 * sin(step + 2 * PI * x / width);
+    int y = wave_height / 2 + wave_height * 0.5 * sin(step + 2 * PI * x / width);
     // Draw the lines above and below the waterline at that x position (y)
-    tft.drawLine(x + offset_x, height + offset_y, x + offset_x, y + offset_y, WHITE);
-    tft.drawLine(x + offset_x, offset_y, x + offset_x, y - 1 + offset_y, BLACK);
+    tft.drawLine(x + position_x, water_y - y, x + position_x, position_y + height - 1, fg_color);
+    tft.drawLine(x + position_x, position_y, x + position_x, water_y - y - 1, bg_color);
   }
-  // Fill the rest of the tank
-  tft.fillRect(offset_x, offset_y + height, width, 100, WHITE);
+  // Draw the tank outline
+  tft.drawRect(position_x - 1, position_y - 1, width + 2, height + 2, WHITE);
+  tft.drawRect(position_x - 2, position_y - 2, width + 4, height + 4, WHITE);
+}
+
+void drawPlot() {
+  // Draw the long history
+  const int chart_x_margin = 10;
+  const int chart_y_margin = 25;
+  // Draw outline
+  tft.drawRect(chart_x_margin - 1, chart_y_margin - 2, HISTORY_PLOT_WIDTH + 2, HISTORY_PLOT_HEIGHT + 4, WHITE);
+  // Draw plot
+  for (size_t x = 0; x < long_history.size(); x++) {
+    // Calculate pixel that will be colored
+    int height = map(long_history[x], TANK_FULL_DEPTH, TANK_EMPTY_DEPTH, 0, HISTORY_PLOT_HEIGHT);
+    // Color the calculated pixel (and the one above and below) and make everything above and below black (in this collumn)
+    tft.drawLine(chart_x_margin + x, chart_y_margin, chart_x_margin + x, chart_y_margin + height - 2, BLACK);
+    tft.drawLine(chart_x_margin + x, chart_y_margin + height - 1, chart_x_margin + x, chart_y_margin + height + 1, RED);
+    tft.drawLine(chart_x_margin + x, chart_y_margin + height + 1, chart_x_margin + x, chart_y_margin + HISTORY_PLOT_HEIGHT - 1, BLACK);
+  }
+  // Draw labels
+  tft.setTextSize(1);
+  tft.setTextColor(WHITE);
+  tft.setCursor(HISTORY_PLOT_WIDTH + chart_x_margin + 10, chart_y_margin);
+  tft.println("100%");
+  tft.setCursor(HISTORY_PLOT_WIDTH + chart_x_margin + 10, chart_y_margin + HISTORY_PLOT_HEIGHT - 5);
+  tft.println("0%");
+  tft.setCursor(HISTORY_PLOT_WIDTH / 2 + chart_x_margin, chart_y_margin + HISTORY_PLOT_HEIGHT + 7);
+  tft.print(LONG_HISTORY_SIZE);
+  tft.println("h");
 }
 
 // Main loop
@@ -314,21 +345,22 @@ void loop() {
   // First get the distance to the water from the sensor
   float distance = measureDistance();
 
+  //TODO remove artificial data gen
+  //distance = 50 + 20 * sin(millis() * 0.0001);
+
   // Add the distance to the history
   short_history.push(distance);
 
   // Calculate the average of the short history
   float distance_avg = 0;
-  for (size_t i = 0; i < short_history.size(); i++)
-  {
+  for (size_t i = 0; i < short_history.size(); i++) {
     distance_avg += short_history[i];
   }
   distance_avg /= short_history.size();
 
   // Update the long history every LONG_HISTORY_UPDATE_INTERVAL
   auto current_time = millis();
-  if (current_time > last_long_history_update + LONG_HISTORY_UPDATE_INTERVAL)
-  {
+  if (current_time > last_long_history_update + LONG_HISTORY_UPDATE_INTERVAL) {
     // Add the average of the short history to the long history
     long_history.push(distance_avg);
     // Update the last update timestamp
@@ -336,7 +368,7 @@ void loop() {
   }
 
   // Convert distance to liter and percent based on provided tank dimensions
-  float liter = map(distance_avg * 10, TANK_FULL_DEPTH * 10, TANK_EMPTY_DEPTH *  10, TANK_VOLUME, 0); // Scale by 10 here, because we cast to an int and the liters have more prescision than the cm (as an int)
+  float liter = map(distance_avg * 10, TANK_FULL_DEPTH * 10, TANK_EMPTY_DEPTH * 10, TANK_VOLUME, 0);  // Scale by 10 here, because we cast to an int and the liters have more prescision than the cm (as an int)
   float percent = map(distance_avg, TANK_FULL_DEPTH, TANK_EMPTY_DEPTH, 100, 0);
 
   // Query the touch screen and process the control bar buttons
@@ -349,23 +381,25 @@ void loop() {
     goToNextPage(false);
 
   // Draw pages
-  switch (current_page)
-  {
+  switch (current_page) {
     // Draw page that displays the liters as big numbers
     case BIG_NUM_LITER:
-      drawBigNumber(liter, 'L');
+      drawBigNumber(big_letters_left_margin, big_letters_y, liter, 'L');
       break;
     // Draw page that displays the level in percent as big numbers
     case BIG_NUM_PERCENT:
-      drawBigNumber(percent, '%');
+      drawBigNumber(big_letters_left_margin, big_letters_y, percent, '%');
       break;
     // Draw combined view of tank illustration, percent and liter
     case TANK_VIEW:
-      tft.setTextSize(2);
-      tft.setTextColor(WHITE);
-      tft.setCursor(10, 10);
-      tft.println("Tank View");
-      drawTank(0,0,100);
+      drawTank(30, 30, 100, control_bar_divider_y - 2 * 30, 5, percent, BLUE, VERYDARKGREY);
+      drawBigNumber(160, 40, percent, '%', 5);
+      drawBigNumber(160, 110, liter, 'L', 5);
+      break;
+    // Draw history page
+    case HISTORY:
+      // Draw the long history
+      drawPlot();
       break;
     // Draw settings page
     case SETTINGS:
