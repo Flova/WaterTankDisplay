@@ -1,5 +1,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_TFTLCD.h>
+#include <CircularBuffer.hpp>
 #include <EEPROM.h>
 #include <TouchScreen.h>
 
@@ -88,6 +89,19 @@ enum Pages current_page = BIG_NUM_LITER;
 
 #define LAST_PAGE_EEPROM_ADDR 0
 
+// History
+#define LONG_HISTORY_SIZE 24 // 24 hours
+#define SHORT_HISTORY_SIZE 64 // samples
+#define HISTORY_PLOT_WIDTH 128 // pixels
+
+// Rolling buffer of uint16_t values
+CircularBuffer<float, HISTORY_PLOT_WIDTH> long_history;
+unsigned long last_long_history_update = 0;
+#define LONG_HISTORY_UPDATE_INTERVAL LONG_HISTORY_SIZE * 60 * 60 * 1000 / HISTORY_PLOT_WIDTH // ms
+
+// Rolling buffer of uint16_t values
+CircularBuffer<float, SHORT_HISTORY_SIZE> short_history;
+
 // Initialization
 void setup() {
   // Check if the last page was saved in the EEPROM
@@ -143,7 +157,7 @@ float measureDistance() {
   digitalWrite(SONAR_TRIGGER_PIN, LOW);
 
   // Calculate duration of the reflection
-  float duration = pulseIn(SONAR_ECHO_PIN, HIGH);
+  float duration = pulseIn(SONAR_ECHO_PIN, HIGH, 10000);
 
   // Calculate distance
   float distance = (duration * .0343) / 2;
@@ -300,9 +314,30 @@ void loop() {
   // First get the distance to the water from the sensor
   float distance = measureDistance();
 
+  // Add the distance to the history
+  short_history.push(distance);
+
+  // Calculate the average of the short history
+  float distance_avg = 0;
+  for (size_t i = 0; i < short_history.size(); i++)
+  {
+    distance_avg += short_history[i];
+  }
+  distance_avg /= short_history.size();
+
+  // Update the long history every LONG_HISTORY_UPDATE_INTERVAL
+  auto current_time = millis();
+  if (current_time > last_long_history_update + LONG_HISTORY_UPDATE_INTERVAL)
+  {
+    // Add the average of the short history to the long history
+    long_history.push(distance_avg);
+    // Update the last update timestamp
+    last_long_history_update = current_time;
+  }
+
   // Convert distance to liter and percent based on provided tank dimensions
-  float liter = map(distance * 10, TANK_FULL_DEPTH * 10, TANK_EMPTY_DEPTH *  10, TANK_VOLUME, 0); // Scale by 10 here, because we cast to an int and the liters have more prescision than the cm (as an int)
-  float percent = map(distance, TANK_FULL_DEPTH, TANK_EMPTY_DEPTH, 100, 0);
+  float liter = map(distance_avg * 10, TANK_FULL_DEPTH * 10, TANK_EMPTY_DEPTH *  10, TANK_VOLUME, 0); // Scale by 10 here, because we cast to an int and the liters have more prescision than the cm (as an int)
+  float percent = map(distance_avg, TANK_FULL_DEPTH, TANK_EMPTY_DEPTH, 100, 0);
 
   // Query the touch screen and process the control bar buttons
   auto touch_state = TouchGetXY();
