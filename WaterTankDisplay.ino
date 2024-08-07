@@ -111,6 +111,8 @@ CircularBuffer<float, SHORT_HISTORY_SIZE> short_history;
 // Initialization
 void setup() {
 
+  Serial.begin(9600);
+
   // Check if the last page was saved in the EEPROM
   int eeprom_page = EEPROM.read(LAST_PAGE_EEPROM_ADDR);
   current_page = (enum Pages)constrain(eeprom_page, 0, page_count - 1);
@@ -168,6 +170,8 @@ float measureDistance() {
 
   // Calculate distance
   float distance = (duration * .0343) / 2;
+
+  Serial.println(distance);
 
   // Clamp distance to min/max
   return constrain(distance, TANK_FULL_DEPTH, TANK_EMPTY_DEPTH);
@@ -354,6 +358,7 @@ void loop() {
     distance_avg += short_history[i];
   }
   distance_avg /= short_history.size();
+
 
   // Update the long history every LONG_HISTORY_UPDATE_INTERVAL
   auto current_time = millis();
