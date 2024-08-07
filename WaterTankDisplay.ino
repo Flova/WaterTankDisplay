@@ -84,7 +84,7 @@ enum Pages {
   BIG_NUM_PERCENT = 1,
   TANK_VIEW = 2,
   HISTORY = 3,
-  SETTINGS = 4,
+  HELP = 4
 };
 // Number of pages in the enum above
 const int page_count = 5;
@@ -92,11 +92,10 @@ const int page_count = 5;
 // ---- States ----
 // Current page
 enum Pages current_page = BIG_NUM_LITER;
-
 #define LAST_PAGE_EEPROM_ADDR 0
 
 // History
-#define LONG_HISTORY_SIZE 1      // hours
+#define LONG_HISTORY_SIZE 24     // hours   change this to get a longer plot
 #define SHORT_HISTORY_SIZE 64    // samples
 #define HISTORY_PLOT_WIDTH 256   // pixels
 #define HISTORY_PLOT_HEIGHT 128  // pixels
@@ -111,8 +110,6 @@ CircularBuffer<float, SHORT_HISTORY_SIZE> short_history;
 
 // Initialization
 void setup() {
-
-  Serial.begin(9600);
 
   // Check if the last page was saved in the EEPROM
   int eeprom_page = EEPROM.read(LAST_PAGE_EEPROM_ADDR);
@@ -178,8 +175,8 @@ float measureDistance() {
 
 // Advances the displayed page state
 void goToNextPage(bool reverse) {
-  // Is -1 for reverse and 1 if not
-  int step = -reverse * 2 + 1;
+  // This is -1 for reverse and 1 if not
+  int step = -reverse + !reverse;
 
   // Keep ref to old page
   auto old_page = current_page;
@@ -345,7 +342,7 @@ void loop() {
   // First get the distance to the water from the sensor
   float distance = measureDistance();
 
-  //TODO remove artificial data gen
+  // Artificial data gen for testing purposes only
   //distance = 50 + 20 * sin(millis() * 0.0001);
 
   // Add the distance to the history
@@ -401,12 +398,21 @@ void loop() {
       // Draw the long history
       drawPlot();
       break;
-    // Draw settings page
-    case SETTINGS:
-      tft.setTextSize(2);
+    case HELP:
+      // Draw help page
+      tft.setTextSize(3);
+      tft.setTextColor(ORANGE);
+      tft.setCursor(20, 50);
+      tft.println("WaterTankDisplay");
+
+      tft.setTextSize(1);
       tft.setTextColor(WHITE);
-      tft.setCursor(10, 10);
-      tft.println("Settings");
+      tft.setCursor(20, 100);
+      tft.println("https://github.com/Flova/WaterTankDisplay");
+
+      tft.setCursor(20, 140);
+      tft.println("2024");
+    
       break;
   }
 }
