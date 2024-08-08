@@ -25,6 +25,8 @@ Currently, you can use the touch screen to rotate through the following screens:
 - [x] Persistent page selection (survives power cycles)
 - [x] Serial raw data output
 - [x] Configurable tank size
+- [x] Minimal latency due to partial screen updates
+- [x] No redraw flickering
 
 ## Hardware
 
