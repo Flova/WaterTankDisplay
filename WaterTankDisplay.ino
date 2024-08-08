@@ -417,7 +417,7 @@ void loop() {
 
       tft.setCursor(20, 140);
       tft.println("2024");
-    
+
       break;
   }
 }
