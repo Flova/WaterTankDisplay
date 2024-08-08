@@ -32,6 +32,8 @@ Currently, you can use the touch screen to rotate through the following screens:
 - ILI9341 2.4" TFT touchscreen display (tested using [this Arduino Shield](https://www.amazon.de/dp/B086W6D9Z2), the pinout might differ for other displays)
 - Ultrasonic sensor (e.g. HC-SR04 or A02YYUW for a waterproof version)
 
+![Demo](img/no_case.png)
+
 ## Setup
 
 1. Connect the ultrasonic sensor to the Arduino Uno. By default, the ultrasonic sensor is connected to the following pins, as most other pins are used by the TFT display:
