@@ -4,9 +4,9 @@
 
 A feature-rich water tank display using a 2.4" TFT touchscreen display, an Arduino Uno, and an ultrasonic sensor.
 
-Currently, you can use the touch screen to rotate through the following screens:
-
 ## Screens
+
+Currently, you can use the touch screen to rotate through the following screens:
 
 | Screen | Description | Image |
 | --- | --- | --- |
